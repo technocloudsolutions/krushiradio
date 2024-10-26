@@ -1,0 +1,36 @@
+name: CI/CD for Next.js
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build the application
+        run: npm run build
+
+      - name: Deploy to VPS
+        env:
+          VPS_IP: ${{ secrets.VPS_IP }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+          APP_NAME: 'audio-library'
+        run: |
+          echo "Deploying to VPS..."
+          sshpass -p $VPS_PASSWORD scp -r ./out $VPS_USER@$VPS_IP:/projects/$APP_NAME
+          sshpass -p $VPS_PASSWORD ssh $VPS_USER@$VPS_IP "pm2 restart $APP_NAME"
