@@ -27,7 +27,7 @@ jobs:
         run: |
           echo "Deploying to VPS..."
           sshpass -p "$VPS_PASSWORD" ssh $VPS_USER@$VPS_IP "
-            cd /projects/$APP_NAME &&
+            cd /projects &&
             git pull origin main &&
             npm install &&
             npm run build &&
