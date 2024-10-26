@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from "./ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -31,12 +31,7 @@ const AudioLibrary: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-
-  useEffect(() => {
-    fetchAudioEntries();
-  }, []);
-
-  useEffect(() => {
+  const filterEntries = useCallback(() => {
     const filtered = audioEntries.filter((entry) => {
       const matchesSearch = 
         entry.program_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -51,7 +46,15 @@ const AudioLibrary: React.FC = () => {
     });
     setFilteredEntries(filtered);
     setCurrentPage(1); // Reset to first page when filtering
-  }, [searchTerm, startDate, endDate, audioEntries]);
+  }, [audioEntries, searchTerm, startDate, endDate]);
+
+  useEffect(() => {
+    filterEntries();
+  }, [filterEntries, searchTerm, startDate, endDate]);
+
+  useEffect(() => {
+    fetchAudioEntries();
+  }, []);
 
   const fetchAudioEntries = async () => {
     setIsLoading(true);
