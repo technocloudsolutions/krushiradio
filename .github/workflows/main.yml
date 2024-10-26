@@ -38,4 +38,10 @@ jobs:
         run: |
           echo "Deploying to VPS..."
           sshpass -p $VPS_PASSWORD scp -r .next $VPS_USER@$VPS_IP:/projects/$APP_NAME
-          sshpass -p $VPS_PASSWORD ssh $VPS_USER@$VPS_IP "export PATH=$PATH:/root/.nvm/versions/node/v20.18.0/bin && pm2 restart $APP_NAME"
+          sshpass -p "$VPS_PASSWORD" ssh $VPS_USER@$VPS_IP "
+            export PATH=\$PATH:/root/.nvm/versions/node/v20.18.0/bin &&
+            if pm2 describe $APP_NAME > /dev/null; then
+              pm2 restart $APP_NAME --update-env;
+            else
+              pm2 start npm --name \"$APP_NAME\" -- start;
+            fi
