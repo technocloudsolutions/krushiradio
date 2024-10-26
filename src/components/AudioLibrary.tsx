@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Input } from "./ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
-import { Share2, Download, Play, Pause, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { Share2, Download, Play, Pause, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 
 export interface AudioEntry {
   id: number;
@@ -31,12 +31,26 @@ const AudioLibrary: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const audioRef = useRef<HTMLAudioElement>(null);
 
+
   useEffect(() => {
     fetchAudioEntries();
   }, []);
 
   useEffect(() => {
-    filterEntries();
+    const filtered = audioEntries.filter((entry) => {
+      const matchesSearch = 
+        entry.program_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.description.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const entryDate = new Date(entry.date);
+      const isAfterStartDate = startDate ? entryDate >= new Date(startDate) : true;
+      const isBeforeEndDate = endDate ? entryDate <= new Date(endDate) : true;
+
+      return matchesSearch && isAfterStartDate && isBeforeEndDate;
+    });
+    setFilteredEntries(filtered);
+    setCurrentPage(1); // Reset to first page when filtering
   }, [searchTerm, startDate, endDate, audioEntries]);
 
   const fetchAudioEntries = async () => {
@@ -60,23 +74,6 @@ const AudioLibrary: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const filterEntries = () => {
-    const filtered = audioEntries.filter((entry) => {
-      const matchesSearch = 
-        entry.program_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        entry.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        entry.description.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const entryDate = new Date(entry.date);
-      const isAfterStartDate = startDate ? entryDate >= new Date(startDate) : true;
-      const isBeforeEndDate = endDate ? entryDate <= new Date(endDate) : true;
-
-      return matchesSearch && isAfterStartDate && isBeforeEndDate;
-    });
-    setFilteredEntries(filtered);
-    setCurrentPage(1); // Reset to first page when filtering
   };
 
   const getInitials = (name: string) => {
