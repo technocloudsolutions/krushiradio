@@ -24,6 +24,11 @@ jobs:
       - name: Build the application
         run: npm run build
 
+      - name: Add VPS SSH key to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H  ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
+
       - name: Deploy to VPS
         env:
           VPS_IP: ${{ secrets.VPS_IP }}
