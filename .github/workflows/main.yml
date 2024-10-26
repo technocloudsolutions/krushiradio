@@ -19,23 +19,24 @@ jobs:
           ssh-keyscan -H  ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
 
       - name: Deploy to VPS
-        env:
-          VPS_IP: ${{ secrets.VPS_IP }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
-          APP_NAME: 'audio-library'
-        run: |
-          echo "Deploying to VPS..."
-          sshpass -p "$VPS_PASSWORD" ssh $VPS_USER@$VPS_IP "
-            cd /projects &&
-            git pull origin main &&
-            npm install &&
-            npm run build &&
-            export PATH=\$PATH:/root/.nvm/versions/node/v20.18.0/bin &&
-            if pm2 describe $APP_NAME > /dev/null; then
-              pm2 restart $APP_NAME --update-env;
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.PRIVATE_KEY }}
+          port: 22
+          script: |
+            echo "Deploying to VPS..."
+            cd /projects
+            git clone
+            cd audio-library
+            git pull
+            npm install
+            npm run build
+            export PATH=\$PATH:/root/.nvm/versions/node/v20.18.0/bin
+            if pm2 describe audio-library > /dev/null; then
+              pm2 restart audio-library --update-env;
             else
-              pm2 start npm --name \"$APP_NAME\" -- start --prefix /projects/$APP_NAME;
+              pm2 start npm --name "audio-library" -- start --prefix /projects/audio-library;
             fi
             pm2 save
-          "
