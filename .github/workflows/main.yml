@@ -45,3 +45,4 @@ jobs:
             else
               pm2 start npm --name \"$APP_NAME\" -- start;
             fi
+          "
