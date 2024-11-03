@@ -61,6 +61,7 @@ const AudioForm: React.FC<AudioFormProps> = ({ onAddAudio, onCancel, editingProg
     description: '',
     audioFile: null as File | null,
   });
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (editingProgram) {
@@ -87,6 +88,7 @@ const AudioForm: React.FC<AudioFormProps> = ({ onAddAudio, onCancel, editingProg
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsLoading(true);
     
     // Add validation for required fields
     if (!formData.programName || !formData.date || !formData.category || !formData.description) {
@@ -107,15 +109,18 @@ const AudioForm: React.FC<AudioFormProps> = ({ onAddAudio, onCancel, editingProg
       const response = await onAddAudio(formDataToSend);
       if (!response.ok) {
         const errorData = await response.json();
+        setIsLoading(false);
         throw new Error(errorData.error || 'Failed to add/update audio entry');
       }
       alert(editingProgram ? 'Audio entry updated successfully!' : 'Audio entry added successfully!');
       if (typeof onCancel === 'function') {
         onCancel();
       }
+      setIsLoading(false);
     } catch (error: unknown) {
       console.error('Error adding/updating audio entry:', error);
       alert(`Failed to add/update audio entry: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setIsLoading(false);
     }
   };
 
@@ -198,7 +203,7 @@ const AudioForm: React.FC<AudioFormProps> = ({ onAddAudio, onCancel, editingProg
             />
           </div>
           <div className="flex justify-between">
-            <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Button disabled={isLoading} type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white">
               {editingProgram ? 'Update Audio' : 'Add Audio'}
             </Button>
             {typeof onCancel === 'function' && (

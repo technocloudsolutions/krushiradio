@@ -4,7 +4,12 @@ import fs from "fs";
 import path from "path";
 import pool from "../../lib/db";
 import { storage } from "../../lib/firebase";
-import { getDownloadURL, ref, uploadBytes, deleteObject } from "firebase/storage";
+import {
+  getDownloadURL,
+  ref,
+  uploadBytes,
+  deleteObject,
+} from "firebase/storage";
 import { log } from "console";
 
 export const config = {
@@ -29,60 +34,71 @@ export default async function handler(req, res) {
       });
 
       const { id, programName, date, category, description } = fields;
+
+      let url = null;
+      let uniqueFilename = null;
       const audioFile = files.audioFile;
 
-      let audioUrl = null;
+      if (audioFile) {
+        const filePath = audioFile[0].filepath;
+        uniqueFilename = `${Date.now()}-${audioFile[0].originalFilename}`;
+        const storageRef = ref(storage, "audio/" + uniqueFilename);
 
-      const filePath = audioFile[0].filepath;
-      const uniqueFilename = `${Date.now()}-${audioFile[0].originalFilename}`;
-      const storageRef = ref(storage, "audio/" + uniqueFilename);
+        const fileBuffer = fs.readFileSync(filePath);
 
-      const fileBuffer = fs.readFileSync(filePath);
-
-      await uploadBytes(storageRef, fileBuffer, {
-        contentType: audioFile[0].mimetype,
-      })
-        .then((snapshot) => {
-          console.log("File uploaded to:", snapshot.ref.fullPath);
-          return getDownloadURL(storageRef);
+        url = await uploadBytes(storageRef, fileBuffer, {
+          contentType: audioFile[0].mimetype,
         })
-        .then(async (url) => {
-          if (req.method === "POST") {
-            const [result] = await pool.query(
-              "INSERT INTO audio_entries (program_name, date, category, description, audio_url, file_name) VALUES (?, ?, ?, ?, ?, ?)",
-              [programName[0], date[0], category[0], description[0], url, uniqueFilename]
-            );
-            res.status(201).json({
-              message: "Audio entry added successfully",
-              id: result.insertId,
-            });
-          } else if (req.method === "PUT") {
-            const updateQuery = audioUrl
-              ? "UPDATE audio_entries SET program_name = ?, date = ?, category = ?, description = ?, audio_url = ?, file_name = ? WHERE id = ?"
-              : "UPDATE audio_entries SET program_name = ?, date = ?, category = ?, description = ? WHERE id = ?";
+          .then((snapshot) => {
+            console.log("File uploaded to:", snapshot.ref.fullPath);
+            return getDownloadURL(storageRef);
+          })
+          .catch((error) => {
+            console.error("Error uploading file:", error);
+            throw error;
+          });
+      }
 
-            const updateParams = audioUrl
-              ? [
-                  programName[0],
-                  date[0],
-                  category[0],
-                  description[0],
-                  url,
-                  id[0],
-                  fileName
-                ]
-              : [programName[0], date[0], category[0], description[0], id[0]];
-
-            await pool.query(updateQuery, updateParams);
-            res
-              .status(200)
-              .json({ message: "Audio entry updated successfully" });
-          }
-        })
-        .catch((error) => {
-          console.error("Error uploading file:", error);
-          throw error;
+      if (req.method === "POST") {
+        const [result] = await pool.query(
+          "INSERT INTO audio_entries (program_name, date, category, description, audio_url, file_name) VALUES (?, ?, ?, ?, ?, ?)",
+          [
+            programName[0],
+            date[0],
+            category[0],
+            description[0],
+            url,
+            uniqueFilename,
+          ]
+        );
+        res.status(201).json({
+          message: "Audio entry added successfully",
+          id: result.insertId,
         });
+      } else if (req.method === "PUT") {
+        if (url) {
+          deleteFileById(id[0]);
+        }
+
+        const updateQuery = url
+          ? "UPDATE audio_entries SET program_name = ?, date = ?, category = ?, description = ?, audio_url = ?, file_name = ? WHERE id = ?"
+          : "UPDATE audio_entries SET program_name = ?, date = ?, category = ?, description = ? WHERE id = ?";
+
+        const updateParams = url
+          ? [
+              programName[0],
+              date[0],
+              category[0],
+              description[0],
+              url,
+              uniqueFilename,
+              id[0],
+            ]
+          : [programName[0], date[0], category[0], description[0], id[0]];
+
+        await pool.query(updateQuery, updateParams);
+        res.status(200).json({ message: "Audio entry updated successfully" });
+      }
 
       fs.unlinkSync(filePath);
     } catch (error) {
@@ -119,21 +135,9 @@ export default async function handler(req, res) {
     }
   } else if (req.method === "DELETE") {
     const { id } = req.query;
+    deleteFileById(id);
 
     try {
-      // First, get the audio_url to delete the file
-      const [rows] = await pool.query(
-        "SELECT file_name FROM audio_entries WHERE id = ?",
-        [id]
-      );
-      if (rows.length > 0) {
-        const fileName = rows[0].file_name;
-        if (fileName) {
-          const storageRef = ref(storage, "audio/" + fileName);
-          await deleteObject(storageRef);
-        }
-      }
-
       // Then, delete the database entry
       await pool.query("DELETE FROM audio_entries WHERE id = ?", [id]);
 
@@ -146,5 +150,20 @@ export default async function handler(req, res) {
     }
   } else {
     res.status(405).json({ error: "Method not allowed" });
+  }
+}
+
+async function deleteFileById(id) {
+  const [rows] = await pool.query(
+    "SELECT file_name FROM audio_entries WHERE id = ?",
+    [id]
+  );
+
+  if (rows.length > 0) {
+    const fileName = rows[0].file_name;
+    if (fileName) {
+      const storageRef = ref(storage, "audio/" + fileName);
+      await deleteObject(storageRef);
+    }
   }
 }
