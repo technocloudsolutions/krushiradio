@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 import pool from "../../lib/db";
 import { storage } from "../../lib/firebase";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { getDownloadURL, ref, uploadBytes, deleteObject } from "firebase/storage";
 import { log } from "console";
 
 export const config = {
@@ -49,8 +49,8 @@ export default async function handler(req, res) {
         .then(async (url) => {
           if (req.method === "POST") {
             const [result] = await pool.query(
-              "INSERT INTO audio_entries (program_name, date, category, description, audio_url) VALUES (?, ?, ?, ?, ?)",
-              [programName[0], date[0], category[0], description[0], url]
+              "INSERT INTO audio_entries (program_name, date, category, description, audio_url, file_name) VALUES (?, ?, ?, ?, ?, ?)",
+              [programName[0], date[0], category[0], description[0], url, uniqueFilename]
             );
             res.status(201).json({
               message: "Audio entry added successfully",
@@ -58,7 +58,7 @@ export default async function handler(req, res) {
             });
           } else if (req.method === "PUT") {
             const updateQuery = audioUrl
-              ? "UPDATE audio_entries SET program_name = ?, date = ?, category = ?, description = ?, audio_url = ? WHERE id = ?"
+              ? "UPDATE audio_entries SET program_name = ?, date = ?, category = ?, description = ?, audio_url = ?, file_name = ? WHERE id = ?"
               : "UPDATE audio_entries SET program_name = ?, date = ?, category = ?, description = ? WHERE id = ?";
 
             const updateParams = audioUrl
@@ -69,6 +69,7 @@ export default async function handler(req, res) {
                   description[0],
                   url,
                   id[0],
+                  fileName
                 ]
               : [programName[0], date[0], category[0], description[0], id[0]];
 
@@ -122,13 +123,15 @@ export default async function handler(req, res) {
     try {
       // First, get the audio_url to delete the file
       const [rows] = await pool.query(
-        "SELECT audio_url FROM audio_entries WHERE id = ?",
+        "SELECT file_name FROM audio_entries WHERE id = ?",
         [id]
       );
       if (rows.length > 0) {
-        const audioUrl = rows[0].audio_url;
-        const filePath = path.join(process.cwd(), "public", audioUrl);
-        await fs.unlink(filePath).catch(() => {}); // Ignore if file doesn't exist
+        const fileName = rows[0].file_name;
+        if (fileName) {
+          const storageRef = ref(storage, "audio/" + fileName);
+          await deleteObject(storageRef);
+        }
       }
 
       // Then, delete the database entry
