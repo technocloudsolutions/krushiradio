@@ -1,16 +1,8 @@
 import * as React from "react"
-
 import { cn } from "@/lib/utils"
 
-interface TextareaProps {
-  id?: string; // Add relevant properties here
-  name?: string;
-  value?: string;
-  onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  className?: string; // Ensure className is also included if used
-  rows?: number; // Add rows property
-  required?: boolean; // Add required property
-}
+export interface TextareaProps
+  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, ...props }, ref) => {
@@ -21,7 +13,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           className
         )}
         ref={ref}
-        {...props} // Ensure all props are spread here
+        {...props}
       />
     )
   }

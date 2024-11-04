@@ -13,6 +13,7 @@ export interface AudioEntry {
   category: string;
   description: string;
   audio_url: string;
+  file_name: string;
   fileExists: boolean;
 }
 
@@ -116,13 +117,34 @@ const AudioLibrary: React.FC = () => {
     }
   };
 
-  const handleDownload = (audioUrl: string, programName: string) => {
-    const link = document.createElement('a');
-    link.href = audioUrl;
-    link.download = `${programName}.mp3`; // Assuming it's an MP3 file
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownload = async (url: string, fileName: string) => {
+    try {
+      const response = await fetch('/api/download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url, fileName }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = fileName || 'audio.mp3';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Download failed:', error);
+      alert('Failed to download file. Please try again.');
+    }
   };
 
   const toggleDescription = (id: number) => {
@@ -217,15 +239,30 @@ const AudioLibrary: React.FC = () => {
                       </Button>
                     )}
                   </div>
-                  <div className="flex justify-between items-center">
-                    <Button variant="outline" size="sm" onClick={() => handlePlay(entry.id, entry.audio_url)} className="flex-1 mr-2 bg-white text-black border-black hover:bg-gray-100">
+                  <div className="flex items-center justify-between gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handlePlay(entry.id, entry.audio_url)} 
+                      className="flex-1 bg-white text-black border-black hover:bg-gray-100"
+                    >
                       {currentlyPlaying === entry.id ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
                       {currentlyPlaying === entry.id ? 'Pause' : 'Play'}
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleShare(entry)} className="mr-2 bg-white text-black border-black hover:bg-gray-100">
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => handleShare(entry)} 
+                      className="bg-white text-black border-black hover:bg-gray-100 w-10 h-10 p-0"
+                    >
                       <Share2 className="w-4 h-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDownload(entry.audio_url, entry.program_name)} className="bg-white text-black border-black hover:bg-gray-100">
+                    <Button 
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleDownload(entry.audio_url, entry.file_name || `${entry.program_name}.mp3`)}
+                      className="bg-white text-black border-black hover:bg-gray-100 w-10 h-10 p-0"
+                    >
                       <Download className="w-4 h-4" />
                     </Button>
                   </div>
