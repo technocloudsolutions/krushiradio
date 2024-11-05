@@ -58,7 +58,7 @@ const AudioLibrary: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const categories = [...new Set(audioEntries.map(entry => entry.category))]; // Get unique categories
+  const categories = Array.from(new Set(audioEntries.map(entry => entry.category)));
   const [audioStates, setAudioStates] = useState<{
     [key: number]: { currentTime: number; duration: number };
   }>({});

@@ -11,9 +11,9 @@ export default function ProgramPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchProgram = async () => {
+    const fetchProgram = async (paramId: any) => {
       try {
-        const response = await fetch(`/api/audio/${params.id}`);
+        const response = await fetch(`/api/audio/${paramId}`);
         if (!response.ok) {
           throw new Error('Program not found');
         }
@@ -27,10 +27,10 @@ export default function ProgramPage() {
       }
     };
 
-    if (params.id) {
-      fetchProgram();
+    if (params && params.id) {
+      fetchProgram(params.id);
     }
-  }, [params.id]);
+  }, [params]);
 
   if (loading) {
     return <div>Loading...</div>;
