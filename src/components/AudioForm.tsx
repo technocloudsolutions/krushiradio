@@ -86,12 +86,6 @@ export default function AudioForm({ onAddAudio, onCancel, editingProgram }: Audi
         formData.append('id', editingProgram.id.toString());
       }
 
-      // Log form data for debugging
-      console.log('Form data contents:');
-      for (let [key, value] of formData.entries()) {
-        console.log(`${key}:`, value);
-      }
-
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 500);

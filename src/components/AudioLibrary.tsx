@@ -1,10 +1,21 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Input } from "./ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
-import { Share2, Download, Play, Pause, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Share2,
+  Download,
+  Play,
+  Pause,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { getStorage, ref, getBlob, getDownloadURL } from "firebase/storage";
+import { storage } from "../lib/firebase";
 
 export interface AudioEntry {
   id: number;
@@ -24,23 +35,27 @@ const AudioLibrary: React.FC = () => {
   const [filteredEntries, setFilteredEntries] = useState<AudioEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [currentlyPlaying, setCurrentlyPlaying] = useState<number | null>(null);
-  const [expandedDescriptions, setExpandedDescriptions] = useState<number[]>([]);
+  const [expandedDescriptions, setExpandedDescriptions] = useState<number[]>(
+    []
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const filterEntries = useCallback(() => {
     const filtered = audioEntries.filter((entry) => {
-      const matchesSearch = 
+      const matchesSearch =
         entry.program_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         entry.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
         entry.description.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       const entryDate = new Date(entry.date);
-      const isAfterStartDate = startDate ? entryDate >= new Date(startDate) : true;
+      const isAfterStartDate = startDate
+        ? entryDate >= new Date(startDate)
+        : true;
       const isBeforeEndDate = endDate ? entryDate <= new Date(endDate) : true;
 
       return matchesSearch && isAfterStartDate && isBeforeEndDate;
@@ -61,27 +76,31 @@ const AudioLibrary: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/audio');
+      const response = await fetch("/api/audio");
       if (!response.ok) {
-        throw new Error('Failed to fetch audio entries');
+        throw new Error("Failed to fetch audio entries");
       }
       const data = await response.json();
       if (Array.isArray(data)) {
         setAudioEntries(data);
         setFilteredEntries(data);
       } else {
-        throw new Error('Received invalid data format');
+        throw new Error("Received invalid data format");
       }
     } catch (error) {
-      console.error('Error fetching audio entries:', error);
-      setError('Failed to load audio entries. Please try again later.');
+      console.error("Error fetching audio entries:", error);
+      setError("Failed to load audio entries. Please try again later.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
   };
 
   const handlePlay = (id: number, audioUrl: string) => {
@@ -109,11 +128,11 @@ const AudioLibrary: React.FC = () => {
           url: shareUrl,
         });
       } catch (error) {
-        console.error('Error sharing:', error);
+        console.error("Error sharing:", error);
       }
     } else {
       navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-      alert('Link copied to clipboard!');
+      alert("Link copied to clipboard!");
     }
   };
 
@@ -148,8 +167,8 @@ const AudioLibrary: React.FC = () => {
   };
 
   const toggleDescription = (id: number) => {
-    setExpandedDescriptions(prev => 
-      prev.includes(id) ? prev.filter(itemId => itemId !== id) : [...prev, id]
+    setExpandedDescriptions((prev) =>
+      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
     );
   };
 
@@ -162,8 +181,12 @@ const AudioLibrary: React.FC = () => {
   return (
     <div className="w-full max-w-7xl mx-auto px-4">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-green-800 mb-2">Krushiradio Audio Collection</h2>
-        <p className="text-green-600">Discover and listen to our curated agricultural radio programs</p>
+        <h2 className="text-3xl font-bold text-green-800 mb-2">
+          Krushiradio Audio Collection
+        </h2>
+        <p className="text-green-600">
+          Discover and listen to our curated agricultural radio programs
+        </p>
       </div>
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <Input
@@ -193,7 +216,10 @@ const AudioLibrary: React.FC = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
         </div>
       ) : error ? (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+          role="alert"
+        >
           <strong className="font-bold">Error: </strong>
           <span className="block sm:inline">{error}</span>
         </div>
@@ -201,21 +227,34 @@ const AudioLibrary: React.FC = () => {
         <>
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {paginatedEntries.map((entry) => (
-              <Card key={entry.id} className="overflow-hidden transition-shadow duration-300 ease-in-out hover:shadow-lg bg-gradient-to-br from-green-50 to-green-100">
+              <Card
+                key={entry.id}
+                className="overflow-hidden transition-shadow duration-300 ease-in-out hover:shadow-lg bg-gradient-to-br from-green-50 to-green-100"
+              >
                 <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white p-4">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-green-700 font-bold text-lg">
                       {getInitials(entry.program_name)}
                     </div>
                     <div>
-                      <CardTitle className="text-lg">{entry.program_name}</CardTitle>
-                      <p className="text-sm opacity-75">{entry.category} • {new Date(entry.date).toLocaleDateString()}</p>
+                      <CardTitle className="text-lg">
+                        {entry.program_name}
+                      </CardTitle>
+                      <p className="text-sm opacity-75">
+                        {entry.category} •{" "}
+                        {new Date(entry.date).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-4">
                   <div className="mb-4">
-                    <p className={`text-green-800 ${!expandedDescriptions.includes(entry.id) && 'line-clamp-2'}`}>
+                    <p
+                      className={`text-green-800 ${
+                        !expandedDescriptions.includes(entry.id) &&
+                        "line-clamp-2"
+                      }`}
+                    >
                       {entry.description}
                     </p>
                     {entry.description.length > 100 && (
@@ -272,7 +311,7 @@ const AudioLibrary: React.FC = () => {
           </div>
           <div className="mt-8 flex justify-center items-center space-x-4">
             <Button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
               variant="outline"
               className="border-green-500 text-green-700 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -284,7 +323,9 @@ const AudioLibrary: React.FC = () => {
               Page {currentPage} of {pageCount}
             </span>
             <Button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, pageCount))}
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, pageCount))
+              }
               disabled={currentPage === pageCount}
               variant="outline"
               className="border-green-500 text-green-700 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
