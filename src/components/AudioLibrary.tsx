@@ -16,6 +16,17 @@ import {
 } from "lucide-react";
 import { getStorage, ref, getBlob, getDownloadURL } from "firebase/storage";
 import { storage } from "../lib/firebase";
+import SearchBar from './SearchBar';
+import CategoryFilters from './CategoryFilters';
+import AudioSeekBar from './AudioSeekBar';
+import {
+  FacebookShareButton,
+  TwitterShareButton,
+  WhatsappShareButton,
+  FacebookIcon,
+  TwitterIcon,
+  WhatsappIcon
+} from 'react-share';
 
 export interface AudioEntry {
   id: number;
@@ -44,6 +55,15 @@ const AudioLibrary: React.FC = () => {
   );
   const [currentPage, setCurrentPage] = useState(1);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const categories = [...new Set(audioEntries.map(entry => entry.category))]; // Get unique categories
+  const [audioStates, setAudioStates] = useState<{
+    [key: number]: { currentTime: number; duration: number };
+  }>({});
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareData, setShareData] = useState<{ url: string; title: string } | null>(null);
 
   const filterEntries = useCallback(() => {
     const filtered = audioEntries.filter((entry) => {
@@ -57,16 +77,18 @@ const AudioLibrary: React.FC = () => {
         ? entryDate >= new Date(startDate)
         : true;
       const isBeforeEndDate = endDate ? entryDate <= new Date(endDate) : true;
+      
+      const matchesCategory = selectedCategory ? entry.category === selectedCategory : true;
 
-      return matchesSearch && isAfterStartDate && isBeforeEndDate;
+      return matchesSearch && isAfterStartDate && isBeforeEndDate && matchesCategory;
     });
     setFilteredEntries(filtered);
     setCurrentPage(1); // Reset to first page when filtering
-  }, [audioEntries, searchTerm, startDate, endDate]);
+  }, [audioEntries, searchTerm, startDate, endDate, selectedCategory]);
 
   useEffect(() => {
     filterEntries();
-  }, [filterEntries, searchTerm, startDate, endDate]);
+  }, [filterEntries, searchTerm, startDate, endDate, selectedCategory]);
 
   useEffect(() => {
     fetchAudioEntries();
@@ -116,24 +138,17 @@ const AudioLibrary: React.FC = () => {
     }
   };
 
-  const handleShare = async (entry: AudioEntry) => {
+  const handleShare = (entry: AudioEntry) => {
     const shareUrl = `${window.location.origin}/program/${entry.id}`;
-    const shareText = `Listen to ${entry.program_name}`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: entry.program_name,
-          text: shareText,
-          url: shareUrl,
-        });
-      } catch (error) {
-        console.error("Error sharing:", error);
-      }
-    } else {
-      navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-      alert("Link copied to clipboard!");
-    }
+    const shareTitle = `Listen to ${entry.program_name} on Krushi Radio`;
+    
+    console.log('Share URL:', shareUrl);
+    
+    setShareData({ 
+      url: shareUrl, 
+      title: shareTitle 
+    });
+    setIsShareModalOpen(true);
   };
 
   const handleDownload = async (url: string, fileName: string) => {
@@ -178,11 +193,43 @@ const AudioLibrary: React.FC = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
+  const handleSeek = (time: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+      setCurrentTime(time);
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration);
+    }
+  };
+
+  const filterPrograms = (programs: AudioEntry[]) => {
+    return programs.filter(program => 
+      !selectedCategory || program.category === selectedCategory
+    );
+  };
+
+  const updateAudioState = (id: number, currentTime: number, duration: number) => {
+    setAudioStates(prev => ({
+      ...prev,
+      [id]: { currentTime, duration }
+    }));
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto px-4">
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-green-800 mb-2">
-          Krushiradio Audio Collection
+        ගහකොල අතරේ හුස්ම හොයනා රේඩියෝ යාත්‍රිකයා 
         </h2>
         <p className="text-green-600">
           Discover and listen to our curated agricultural radio programs
@@ -209,6 +256,13 @@ const AudioLibrary: React.FC = () => {
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
           className="w-full md:w-auto"
+        />
+      </div>
+      <div className="mb-6">
+        <CategoryFilters
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onCategorySelect={setSelectedCategory}
         />
       </div>
       {isLoading ? (
@@ -278,6 +332,19 @@ const AudioLibrary: React.FC = () => {
                       </Button>
                     )}
                   </div>
+                  {currentlyPlaying === entry.id && audioStates[entry.id] && (
+                    <div className="mb-4">
+                      <AudioSeekBar
+                        currentTime={audioStates[entry.id].currentTime}
+                        duration={audioStates[entry.id].duration}
+                        onSeek={(time) => {
+                          if (audioRef.current) {
+                            audioRef.current.currentTime = time;
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
                   <div className="flex items-center justify-between gap-2">
                     <Button 
                       variant="outline" 
@@ -334,9 +401,91 @@ const AudioLibrary: React.FC = () => {
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
+          {isShareModalOpen && shareData && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Share Program</h3>
+                  <button 
+                    onClick={() => setIsShareModalOpen(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex justify-center space-x-4 mb-4">
+                  <FacebookShareButton url={shareData.url}>
+                    <FacebookIcon size={32} round />
+                  </FacebookShareButton>
+                  
+                  <TwitterShareButton url={shareData.url} title={shareData.title}>
+                    <TwitterIcon size={32} round />
+                  </TwitterShareButton>
+                  
+                  <WhatsappShareButton url={shareData.url} title={shareData.title}>
+                    <WhatsappIcon size={32} round />
+                  </WhatsappShareButton>
+                </div>
+                
+                <div className="mt-4">
+                  <p className="text-sm text-gray-600 mb-2">Or copy link:</p>
+                  <div className="flex">
+                    <input
+                      type="text"
+                      value={shareData.url}
+                      readOnly
+                      className="flex-1 p-2 border rounded-l text-sm"
+                    />
+                    <button
+                      onClick={() => {
+                        try {
+                          navigator.clipboard.writeText(shareData.url).then(() => {
+                            const notification = document.createElement('div');
+                            notification.className = 'fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow-lg';
+                            notification.textContent = 'Link copied to clipboard!';
+                            document.body.appendChild(notification);
+                            
+                            setTimeout(() => {
+                              document.body.removeChild(notification);
+                            }, 2000);
+                          });
+                        } catch (error) {
+                          console.error('Failed to copy:', error);
+                          alert('Failed to copy link. Please try again.');
+                        }
+                      }}
+                      className="px-4 py-2 bg-green-600 text-white rounded-r hover:bg-green-700 transition-colors"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
-      <audio ref={audioRef} className="hidden" />
+      <audio
+        ref={audioRef}
+        onTimeUpdate={() => {
+          if (audioRef.current && currentlyPlaying) {
+            updateAudioState(
+              currentlyPlaying,
+              audioRef.current.currentTime,
+              audioRef.current.duration
+            );
+          }
+        }}
+        onLoadedMetadata={() => {
+          if (audioRef.current && currentlyPlaying) {
+            updateAudioState(
+              currentlyPlaying,
+              audioRef.current.currentTime,
+              audioRef.current.duration
+            );
+          }
+        }}
+      />
     </div>
   );
 };

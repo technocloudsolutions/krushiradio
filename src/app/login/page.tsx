@@ -12,7 +12,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // In a real application, you would validate these credentials against a database
-    if (username === 'admin' && password === 'password') {
+    if (username === 'admin' && password === 'tfbs2025') {
       // Set a flag in localStorage to indicate the user is logged in
       localStorage.setItem('isLoggedIn', 'true');
       router.push('/admin');
