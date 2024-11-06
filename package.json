@@ -23,6 +23,7 @@
     "lucide-react": "^0.453.0",
     "mysql2": "^3.11.3",
     "next": "14.1.0",
+    "next-auth": "^4.24.10",
     "next-navigation": "^1.0.6",
     "react": "^18",
     "react-dom": "^18",

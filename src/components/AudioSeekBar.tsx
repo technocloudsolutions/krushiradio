@@ -25,19 +25,41 @@ const AudioSeekBar = ({ currentTime, duration, onSeek }: AudioSeekBarProps) => {
   };
 
   return (
-    <div className="w-full flex items-center gap-2 px-4">
-      <span className="text-sm">{formatTime(currentTime)}</span>
+    <div className="w-full space-y-3">
       <div
         ref={progressBarRef}
-        className="flex-1 h-2 bg-gray-200 rounded-full cursor-pointer"
+        className="h-3 bg-gray-200 rounded-full cursor-pointer relative group"
         onClick={handleClick}
       >
+        {/* Background fill with animated gradient */}
         <div
-          className="h-full bg-blue-500 rounded-full"
+          className="absolute h-full rounded-full transition-all duration-150 bg-gradient-to-r from-green-400 via-green-500 to-green-600 bg-size-200 animate-gradient"
           style={{ width: `${(currentTime / duration) * 100}%` }}
         />
+        
+        {/* Hover effect with ripple */}
+        <div className="absolute top-1/2 -translate-y-1/2 w-full h-full opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute w-full h-full bg-green-100/30 rounded-full animate-pulse" />
+        </div>
+        
+        {/* Enhanced seek handle */}
+        <div 
+          className="absolute h-5 w-5 bg-white border-2 border-green-500 rounded-full top-1/2 -translate-y-1/2 -translate-x-1/2 shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
+          style={{ 
+            left: `${(currentTime / duration) * 100}%`,
+            boxShadow: '0 0 0 4px rgba(34, 197, 94, 0.2)'
+          }}
+        />
       </div>
-      <span className="text-sm">{formatTime(duration)}</span>
+      
+      {/* Enhanced time display */}
+      <div className="flex justify-between items-center text-sm font-medium">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+          <span className="text-green-700">{formatTime(currentTime)}</span>
+        </div>
+        <span className="text-gray-500">{formatTime(duration)}</span>
+      </div>
     </div>
   );
 };

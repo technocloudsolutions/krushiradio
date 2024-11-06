@@ -217,7 +217,7 @@ export default function AudioForm({ onAddAudio, onCancel, editingProgram }: Audi
                       </label>
                     </div>
                     <p className="mt-1 text-xs text-gray-500">
-                      MP3, WAV up to 60MB
+                      MP3, WAV up to 300MB
                     </p>
                   </div>
                 </div>
@@ -310,5 +310,19 @@ const categories = [
   "உழவர் இல்லம்",
   "வண்ணமகுதம்",
   "வீட்டுத்தோட்டம்",
-  "Short massages"
-];
+  "Short massages",
+  "Govithenata Payak (SLBC Colombo)",
+  "Govi Gedara (SLBC Colombo)",
+  "Sannasa",
+  "Ranketha Addara",
+  "Seilama",
+  "Rasogaya",
+  "Rajaratai Govi Bimai",
+  "Saarabhoomi",
+  "Saruketha",
+  "Liyasaraniya",
+  "Govijana Madala",
+  "Thuneththa",
+  "Kalavita",
+  "Govi Dathata ape saviya"
+].sort();

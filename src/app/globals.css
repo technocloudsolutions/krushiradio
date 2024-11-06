@@ -25,3 +25,40 @@ body {
     text-wrap: balance;
   }
 }
+
+/* Add at the top of your globals.css file */
+@font-face {
+  font-family: 'Sinhala';
+  src: url('/fonts/NotoSansSinhala-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Sinhala';
+  src: url('/fonts/NotoSansSinhala-Bold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+}
+
+.font-sinhala {
+  font-family: 'Sinhala', system-ui, -apple-system, sans-serif;
+}
+
+/* Add these keyframes for the gradient animation */
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient 15s ease infinite;
+}
