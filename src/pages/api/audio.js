@@ -24,7 +24,7 @@ export default async function handler(req, res) {
   if (req.method === "POST" || req.method === "PUT") {
     const form = new IncomingForm({
       keepExtensions: true,
-      maxFileSize: 60 * 1024 * 1024 // 60MB in bytes
+      maxFileSize: process.env.MAX_FILE_SIZE || 30 * 1024 * 1024,
     });
 
     try {
